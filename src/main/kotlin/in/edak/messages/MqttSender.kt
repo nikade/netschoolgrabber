@@ -15,7 +15,7 @@ class MqttSender(
     var publisher = MqttClient(brokerUrl, clientId).apply {
         connect(
             MqttConnectOptions().also {
-                it.isAutomaticReconnect = false
+                it.isAutomaticReconnect = true
                 it.isCleanSession = true
                 it.connectionTimeout = 10
                 if(usermameProp != null) it.userName = usermameProp

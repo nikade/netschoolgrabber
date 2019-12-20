@@ -10,6 +10,7 @@ import `in`.edak.netschool.props.MqttProps
 import `in`.edak.props.AllProps
 import `in`.edak.props.MainProps
 import `in`.edak.props.TelegaProps
+import org.openqa.selenium.Cookie
 
 import java.io.IOException
 import java.lang.Exception
@@ -46,51 +47,56 @@ object Main {
         Logger.info("properties loaded")
 
         val fileStore = FileStore(mainProps.scoreFilename)
+        val cookiesSet = mutableSetOf<Cookie>()
+        val storageMap = mutableMapOf<String,String>()
 
-        Logger.info("start selenium init")
-        val netSchoolGrabber = Grabber(mainProps.seleniumUrl, mainProps.netSchoolUrl)
-        val login = Login(netSchoolGrabber.webDriver)
-        val dairy = Dairy(netSchoolGrabber.webDriver)
-        //val navigate = Navigate(netSchoolGrabber.webDriver)
-        Logger.info("start selenium init done")
-
-        Logger.info("start scheduler")
         Timer().schedule(
                 1000,
-                10*60*1000 // period 10 minutes
+                mainProps.period.toLong()*60*1000 // period 10 minutes
         ) {
-            try {
-                Logger.info { "start grab ${Date()}" }
-                Logger.info("logging")
-                login.login(
-                        mainProps.username,
-                        mainProps.password,
-                        mainProps.city,
-                        mainProps.schoolType,
-                        mainProps.school)
-                val currWeek = Utils.getCurrentWeekFrom1Sep()
+            Logger.info("start selenium init")
+            Grabber(mainProps.seleniumUrl, mainProps.netSchoolUrl,
+                    cookiesSet, storageMap, mainProps.browser).use { netSchoolGrabber ->
+                val login = Login(netSchoolGrabber.webDriver, mainProps.netSchoolUrl)
+                val dairy = Dairy(netSchoolGrabber.webDriver)
+                Logger.info("start selenium init done")
+                try {
+                    Logger.info { "start grab ${Date()}" }
+                    Logger.info("logging")
+                    login.login(
+                            mainProps.username,
+                            mainProps.password,
+                            mainProps.city,
+                            mainProps.schoolType,
+                            mainProps.school)
+                    //netSchoolGrabber.saveCookies()
 
-                val lastThreeWeekLessons = (maxOf(1,currWeek-mainProps.weeksToCollect.toInt())..currWeek).map { week ->
-                    Logger.info { "goto week $week" }
-                    dairy.gotoWeek(week)
-                    Thread.sleep(10000L)
-                    Logger.info("extract dairy")
-                    dairy.extractDairy()
-                }.flatten()
-                Logger.info("write to scorefile")
-                val scoreToSend = fileStore.saveScoresAndNetFilter(lastThreeWeekLessons)
-                scoreToSend.forEach {
-                    val message = "${dateFormat.format(it.date)} ${it.discipline}\n*${it.score}* ${it.scoreReason}"
-                    Logger.info("send message $message")
-                    mqttTopic.send(message)
+                    val lastThreeWeekLessons = (1..mainProps.weeksToCollect.toInt()).map {
+                        dairy.prevWeek()
+                        Thread.sleep(5000L)
+                        Logger.info("extract dairy")
+                        dairy.extractDairy()
+                    }.flatten()
+
+                    Logger.info("write to scorefile")
+                    val scoreToSend = fileStore.saveScoresAndNetFilter(lastThreeWeekLessons)
+
+                    Logger.info("grabbed scores ${lastThreeWeekLessons.size} writed ${scoreToSend.size}")
+                    scoreToSend.forEach {
+                        val message = "${dateFormat.format(it.date)} ${it.discipline}\n*${it.score}* ${it.scoreReason}"
+                        Logger.info("send message $message")
+                        mqttTopic.send(message)
+                    }
+                    //netSchoolGrabber.saveCookies()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Logger.error(e)
+                    telegaErrorTopic.send("NetschoolGrabber " + (e.message ?: "Неизвестная ошибка"))
                 }
-                Logger.info("done ${Date()}")
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Logger.error(e)
-                telegaErrorTopic.send("NetschoolGrabber "+(e.message ?: "Неизвестная ошибка"))
             }
+            Logger.info("done ${Date()}")
         }
+
         Logger.info("join thread - sleep")
         Thread.currentThread().join()
     }

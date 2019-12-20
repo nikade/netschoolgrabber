@@ -11,5 +11,7 @@ data class MainProps(
     val scoreFilename: String,
     val hourBegin: String,
     val hourEnd: String,
-    val weeksToCollect: String
+    val weeksToCollect: String,
+    val browser: String,
+    val period: String
 )

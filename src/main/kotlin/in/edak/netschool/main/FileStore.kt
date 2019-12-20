@@ -21,7 +21,7 @@ class FileStore(val fileName: String) {
                 it != null && !lines.contains(it)
             }
         }
-        File(fileName).writeText(result.map(Dairy.DairyItem::getScoreStr).joinToString("\n"), charset)
+        File(fileName).appendText(result.map(Dairy.DairyItem::getScoreStr).joinToString("\n")+"\n", charset)
         return result
     }
 }

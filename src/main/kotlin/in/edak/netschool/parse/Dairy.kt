@@ -70,6 +70,14 @@ class Dairy(private val wd: RemoteWebDriver) {
         }
     }
 
+    fun prevWeek() {
+        wd.getOrWaitElementXPath("//div[@class='button_prev']")!!.click()
+    }
+
+    fun nextWeek() {
+        wd.getOrWaitElementXPath("//div[@class='button_next']")!!.click()
+    }
+
     fun extractDairy(): List<DairyItem> {
         // <div class="day_table">
         val result = mutableListOf<DairyItem>()
