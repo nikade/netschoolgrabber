@@ -70,7 +70,9 @@ object Main {
                             mainProps.schoolType,
                             mainProps.school)
                     //netSchoolGrabber.saveCookies()
-
+                    Logger.info("goto next week")
+                    dairy.nextWeek()
+                    Thread.sleep(5000L)
                     val lastThreeWeekLessons = (1..mainProps.weeksToCollect.toInt()).map {
                         dairy.prevWeek()
                         Thread.sleep(5000L)
@@ -82,7 +84,7 @@ object Main {
                     val scoreToSend = fileStore.saveScoresAndNetFilter(lastThreeWeekLessons)
 
                     Logger.info("grabbed scores ${lastThreeWeekLessons.size} writed ${scoreToSend.size}")
-                    scoreToSend.forEach {
+                    scoreToSend.reversed().forEach {
                         val message = "${dateFormat.format(it.date)} ${it.discipline}\n*${it.score}* ${it.scoreReason}"
                         Logger.info("send message $message")
                         mqttTopic.send(message)
