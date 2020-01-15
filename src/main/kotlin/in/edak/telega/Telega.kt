@@ -1,6 +1,7 @@
 package `in`.edak.messages
 
 import okhttp3.*
+import org.tinylog.kotlin.Logger
 import java.net.InetSocketAddress
 import java.net.Proxy
 
@@ -47,12 +48,16 @@ class Telega(
         chatId: Long,
         token: String
     ) {
-        val url = "$telegaUrl/bot$token/sendMessage"
-        val params = mapOf(
-            "chat_id" to chatId.toString(),
-            "text" to msg
-        )
-        doRequest(url, params).use {}
+        try {
+            val url = "$telegaUrl/bot$token/sendMessage"
+            val params = mapOf(
+                    "chat_id" to chatId.toString(),
+                    "text" to msg
+            )
+            doRequest(url, params).use {}
+        } catch (e: Exception) {
+            Logger.error("Could not send message \"$msg\" to chatId \"$chatId\"",e)
+        }
     }
 
     fun doRequest(

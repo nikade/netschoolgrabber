@@ -16,12 +16,18 @@ class FileStore(val fileName: String) {
             listOf<String>()
         }
 
-        val result = items.filter {item ->
-            item.getScoreStr().let {
-                it != null && !lines.contains(it)
+        val toFile = mutableListOf<String>()
+        val result = mutableListOf<Dairy.DairyItem>()
+        items.forEach { item ->
+            val score = item.getScoreStr()
+            if(score != null && !lines.contains(score)) {
+                result.add(item)
+                toFile.add(score)
             }
         }
-        File(fileName).appendText(result.map(Dairy.DairyItem::getScoreStr).joinToString("\n")+"\n", charset)
+        if(toFile.isNotEmpty()) {
+            File(fileName).appendText(toFile.joinToString("\n") + "\n", charset)
+        }
         return result
     }
 }
