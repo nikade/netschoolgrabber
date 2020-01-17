@@ -19,15 +19,13 @@ class Dairy(private val wd: RemoteWebDriver) {
             val lessonEnd: String,
             val homeWork: String?,
             val isHomeWorkAttachment: Boolean,
-            val score: Int?,
-            val scoreReason: String?
-    ) {
-        fun getScoreStr(): String? {
-            return if (score != null && score > 0)
-                "${date.time}#$discipline#$lessonNo#$score#$scoreReason"
-            else null
-        }
-    }
+            val scores: List<ScoreItem>
+    )
+
+    data class ScoreItem(
+            val score: Int,
+            val scoreReason: String
+    )
 
     companion object {
         val months = mapOf(
@@ -152,13 +150,15 @@ class Dairy(private val wd: RemoteWebDriver) {
                 // mark: assignWithMark.mark.dutyMark}" title="Ответ на уроке" class="ng-scope five">
                 // </a>
                 //<a href="#" ng-if="data.maxMark == 5" ng-repeat="assignWithMark in lesson.assignmentsWithMarks" ng-click="showAssignInfo(assignWithMark)" ng-class="{one: assignWithMark.mark.mark == 1, two: assignWithMark.mark.mark == 2, three: assignWithMark.mark.mark == 3, four: assignWithMark.mark.mark == 4, five: assignWithMark.mark.mark == 5, mark: assignWithMark.mark.dutyMark}" title="ÐžÑ‚Ð²ÐµÑ‚ Ð½Ð° ÑƒÑ€Ð¾ÐºÐµ" class="ng-scope five">
-                val scoreElement = wd.getOrWaitElementXPath(
-                        "($lessonXpath)[$lessonIndex+1]//a[@ng-repeat='assignWithMark in lesson.assignmentsWithMarks']", 0)
-                val scoreReason = scoreElement?.getAttribute("title")
-                val score = scoreElement?.getAttribute("class")?.let { classText ->
-                    scoreRegexp.find(classText)?.groupValues?.let { values ->
-                        scoreTextMap.getOrDefault(values[1], 0)
+                val scores = wd.findElementsByXPath("($lessonXpath)[$lessonIndex+1]//a[@ng-repeat='assignWithMark in lesson.assignmentsWithMarks']")
+                        .mapNotNull { scoreElement ->
+                    val scoreReason = scoreElement.getAttribute("title")
+                    val score = scoreElement.getAttribute("class")?.let { classText ->
+                        scoreRegexp.find(classText)?.groupValues?.let { values ->
+                            scoreTextMap.getOrDefault(values[1], 0)
+                        }
                     }
+                    if(score != null ) ScoreItem(score, scoreReason ?: "за \"что-то\"") else null
                 }
                 result.add(
                         DairyItem(
@@ -170,8 +170,7 @@ class Dairy(private val wd: RemoteWebDriver) {
                                 lessonEnd = lessionEnd,
                                 homeWork = homeWork,
                                 isHomeWorkAttachment = isHomeWorkAttachment,
-                                score = score,
-                                scoreReason = scoreReason
+                                scores = scores
                         )
                 )
             }

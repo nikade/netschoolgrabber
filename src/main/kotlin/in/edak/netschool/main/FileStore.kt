@@ -19,10 +19,25 @@ class FileStore(val fileName: String) {
         val toFile = mutableListOf<String>()
         val result = mutableListOf<Dairy.DairyItem>()
         items.forEach { item ->
-            val score = item.getScoreStr()
-            if(score != null && !lines.contains(score)) {
-                result.add(item)
-                toFile.add(score)
+            item.scores.forEach {score ->
+                val scoreLine = "${item.date.time}#${item.discipline}#${item.lessonNo}#${score.score}#${score.scoreReason}"
+                if(!lines.contains(scoreLine)) {
+                    toFile.add(scoreLine)
+                    result.add(
+                            Dairy.DairyItem(
+                                    item.date,
+                                    item.dateStr,
+                                    item.lessonNo,
+                                    item.discipline,
+                                    item.lessonBeg,
+                                    item.lessonEnd,
+                                    item.homeWork,
+                                    item.isHomeWorkAttachment,
+                                    listOf(score)
+                            )
+                    )
+                }
+
             }
         }
         if(toFile.isNotEmpty()) {
